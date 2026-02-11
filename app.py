@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app)
 
 import os
-OMDB_API_KEY = os.getenv("16b3cbdf")
+OMDB_API_KEY = os.getenv("OMDB_API_KEY")
 
 def custom_youtube_search(query):
     """Backup search using raw requests and regex if the library fails"""
