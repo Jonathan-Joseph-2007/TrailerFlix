@@ -7,9 +7,8 @@ from youtubesearchpython import VideosSearch
 app = Flask(__name__)
 CORS(app)
 
-# --- YOUR OMDb KEY ---
-OMDB_API_KEY = "e57a99a"
-# ---------------------
+import os
+OMDB_API_KEY = os.getenv("16b3cbdf")
 
 def custom_youtube_search(query):
     """Backup search using raw requests and regex if the library fails"""
