@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrailerFlix</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto:wght @300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --netflix-red: #E50914; --bg: #141414; }
+        body {
+            background-color: var(--bg);
+            background-image: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(20,20,20,1)), url('https://assets.nflxext.com/ffe/siteui/vlv3/f841d4c7-10e1-40af-bcae-07a3f8dc141a/f6d7434e-d6de-4185-a6d4-c77a2d08737b/US-en-20220502-popsignuptwoweeks-perspective_alpha_website_medium.jpg');
+            background-size: cover;
+            color: white; font-family: 'Roboto', sans-serif;
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0;
+        }
+        h1 { font-family: 'Bebas Neue', cursive; color: var(--netflix-red); font-size: 5rem; margin: 40px 0 20px; text-shadow: 0 0 20px rgba(229,9,20,0.7); }
+        
+        .input-group { display: flex; background: rgba(0,0,0,0.8); border-radius: 4px; border: 1px solid #333; overflow: hidden; }
+        input { background: transparent; border: none; color: white; padding: 15px; width: 300px; font-size: 1.2rem; outline: none; }
+        button { background: var(--netflix-red); color: white; border: none; padding: 0 30px; font-size: 1.2rem; cursor: pointer; font-weight: bold; }
+        button:hover { background: #f40612; }
+
+        #movie-card { display: none; width: 90%; max-width: 900px; background: #181818; border-radius: 10px; overflow: hidden; margin-top: 40px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+        .card-content { display: flex; }
+        .poster { width: 300px; height: 450px; object-fit: cover; }
+        .info { padding: 40px; flex: 1; }
+        h2 { font-size: 3rem; margin: 0 0 10px; }
+        .meta { color: #aaa; font-size: 1.1rem; margin-bottom: 20px; }
+        .match { color: #46d369; font-weight: bold; margin-right: 15px; }
+        .plot { line-height: 1.6; font-size: 1.1rem; }
+
+        /* Video Area */
+        .video-wrapper { position: relative; padding-bottom: 56.25%; height: 0; background: black; }
+        iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+        
+        /* Fallback Button (Shown if video fails) */
+        .fallback-msg { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .fallback-btn { margin-top: 20px; padding: 15px 30px; background: #333; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; border: 1px solid #555; }
+        .fallback-btn:hover { background: #555; }
+
+        @media (max-width: 700px) { .card-content { flex-direction: column; } .poster { width: 100%; height: auto; } }
+    </style>
+</head>
+<body>
+
+    <h1>Trailer<span style="color:white">Flix</span></h1>
+    <div class="input-group">
+        <input type="text" id="movieInput" placeholder="Enter movie name..." onkeypress="handleEnter(event)">
+        <button onclick="searchMovie()">Search</button>
+    </div>
+    <p id="status" style="margin-top: 10px; color: #ccc;"></p>
+
+    <div id="movie-card">
+        <div class="card-content">
+            <img id="poster" class="poster" src="" alt="Poster">
+            <div class="info">
+                <h2 id="title">Title</h2>
+                <div class="meta">
+                    <span class="match">98% Match</span>
+                    <span id="year"></span> • ⭐ <span id="rating"></span>
+                </div>
+                <p id="plot" class="plot">Plot...</p>
+            </div>
+        </div>
+        
+        <div class="video-wrapper" id="video-container">
+            <iframe id="video-frame" src="" allowfullscreen></iframe>
+            
+            <div id="fallback-box" class="fallback-msg" style="display: none;">
+                <h3>⚠️ Auto-play Blocked by Network</h3>
+                <p>Click below to watch the trailer directly on YouTube.</p>
+                <a id="youtube-link" class="fallback-btn" href="#" target="_blank">Watch on YouTube</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function searchMovie() {
+            const input = document.getElementById('movieInput').value;
+            const status = document.getElementById('status');
+            const card = document.getElementById('movie-card');
+            const iframe = document.getElementById('video-frame');
+            const fallback = document.getElementById('fallback-box');
+
+            if(!input) return;
+            status.innerText = "Searching...";
+            card.style.display = "none";
+
+            try {
+                const res = await fetch(`/get-movie?name=${encodeURIComponent(input)}`);
+                const data = await res.json();
+
+                if(data.status === "success") {
+                    status.innerText = "";
+                    card.style.display = "block";
+                    
+                    document.getElementById('title').innerText = data.title;
+                    document.getElementById('year').innerText = data.year;
+                    document.getElementById('rating').innerText = data.rating;
+                    document.getElementById('plot').innerText = data.plot;
+                    
+                    let poster = data.poster !== "N/A" ? data.poster : "https://via.placeholder.com/300x450";
+                    document.getElementById('poster').src = poster.replace("SX300", "SX1000");
+
+                    // LOGIC: If we have an ID, show video. If not, show button.
+                    if(data.youtube_id) {
+                        iframe.style.display = "block";
+                        fallback.style.display = "none";
+                        iframe.src = `https://www.youtube.com/embed/${data.youtube_id}?autoplay=1&rel=0`;
+                    } else {
+                        // Show Fallback Button
+                        iframe.style.display = "none";
+                        fallback.style.display = "flex";
+                        // Create a smart search link
+                        const ytSearch = `https://www.youtube.com/results?search_query=${encodeURIComponent(data.title + " official trailer")}`;
+                        document.getElementById('youtube-link').href = ytSearch;
+                    }
+                } else {
+                    status.innerText = "❌ Movie not found";
+                }
+            } catch(err) {
+                console.error(err);
+                status.innerText = "⚠️ Server Error";
+            }
+        }
+        function handleEnter(e) { if (e.key === 'Enter') searchMovie(); }
+    </script>
+</body>
+</html>
